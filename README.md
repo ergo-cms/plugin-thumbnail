@@ -2,7 +2,8 @@
 
 This plugin provides the ability to rescale an image, and provide support for responsive images, using `srcset` attribute. The images are automatically generated as part of the build process.
 
-Note that this implementation makes use of a 100% Javascript image library. This is significantly slower than native libraries, but is more likely to work across different machine architectures. As such, you may wish to consider using the 'thumbnail-fast' plugin instead, which is identical in every way, (except that it may not install properly on your machine). See https://github.com/ergo-cms/plugin-thumbnail-fast.
+Note that this plugin makes use of two differing image libraries. The first is a 100% Javascript image library (Jimp), which is significantly slower than native libraries, but is more likely to work across different machine architectures. The second library (Sharp) is much faster, but may encounter installation issues. If the installation of Sharp fails, then Jimp is used automatically as a fallback. 
+Initial testing shows that Sharp is around 5 times faster at processing images than Jimp.
 
 
 ## Installation
@@ -14,6 +15,7 @@ ergo plugin install thumbnail
 cd plugins/thumbnail
 npm install --production
 ```
+
 
 ## Options 
 

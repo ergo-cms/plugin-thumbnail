@@ -20,5 +20,8 @@
   "dependencies": {
     "bluebird": "^3.4.7",
     "jimp": "^0.2.27"
+  },
+  "optionalDependencies": {
+  	"sharp":"^0.17.1"
   }
 }

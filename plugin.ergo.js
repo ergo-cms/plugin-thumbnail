@@ -2,11 +2,17 @@ var path = require('path');
 var fs = require('fs');
 try { 
 	var Promise = require('bluebird');
-	var Jimp = require('jimp'); 
+	var sharp = require('sharp');
 	// promisify a few funcs we need
 	"readFile,writeFile".split(',').forEach(function(fn) {
 		fs[fn] = Promise.promisify(fs[fn])
 	});
+}
+
+catch(e) {}
+try {
+
+	var Jimp = !sharp ? require('jimp') : sharp; // we WILL use sharp if we've installed it ok (it's faster)
 } catch(e) { }
 
 
@@ -31,11 +37,14 @@ function _thumbnail_filter(image_name, params) {
 		basepath: params.p || params.path || this.images_path,
 		//source: image_name,
 		//dest: '',
-		w: params.width || params.w,
-		h: params.height || params.h,
+		w: parseInt(params.width || params.w),
+		h: parseInt(params.height || params.h),
 	}
+	if (isNaN(inf.w)) inf.w = undefined;
 	if (!inf.w && !inf.h)
-		inf.w = this.thumb_defwidth || 512;
+		inf.w = parseInt(this.thumb_defwidth || 512);
+	if (isNaN(inf.w)) inf.w = undefined;
+	if (isNaN(inf.h)) inf.h = undefined;
 
 	var w = inf.w || '';
 	var h = inf.h;
@@ -80,16 +89,30 @@ function _thumbnail_save(env) {
 
 			//l("Reading '"+source+"'");
 			var data = yield fs.readFile(source)
-			//l("Opening '"+source+"'");
-			var image = yield Jimp.read(data);
-			delete data;
 
-			//l("Resizing '"+source+"'");
-			image.resize(
-					parseInt(inf.w) || Jimp.AUTO,
-					parseInt(inf.h) || Jimp.AUTO).quality(70);
-			l("Writing '"+dest+"'");
-			image.write(dest);
+			if (sharp) {
+				//l("Opening '"+source+"'");
+				var image = sharp(data);
+				delete data;
+
+				//l("Resizing '"+source+"'");
+				image.resize(inf.w,inf.h);
+				l("Writing '"+dest+"' using Sharp");
+				yield image.toFile(dest);
+			}
+			else
+			{
+				//l("Opening '"+source+"'");
+				var image = yield Jimp.read(data);
+				delete data;
+
+				//l("Resizing '"+source+"'");
+				image.resize(
+						parseInt(inf.w) || Jimp.AUTO,
+						parseInt(inf.h) || Jimp.AUTO).quality(70);
+				l("Writing '"+dest+"' using Jimp");
+				image.write(dest);
+			}
 			//l("done");
 
 		}
