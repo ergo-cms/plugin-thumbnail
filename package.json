@@ -1,0 +1,24 @@
+{
+  "private":true,
+  "name": "ergo-thumbnail",
+  "version": "0.1.0",
+  "description": "Thumbnail generator for ergo-cms",
+  "main": "plugin.ergo.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ergo-cms/plugin-thumnail.git"
+  },
+  "author": "cmroanirgo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ergo-cms/plugin-thumnail/issues"
+  },
+  "homepage": "https://github.com/ergo-cms/plugin-thumnail#readme",
+  "dependencies": {
+    "bluebird": "^3.4.7",
+    "jimp": "^0.2.27"
+  }
+}
