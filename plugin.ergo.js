@@ -3,15 +3,16 @@ var fs = require('fs');
 try { 
 	var Promise = require('bluebird');
 	var Jimp = require('jimp'); 
+	// promisify a few funcs we need
+	"readFile,writeFile".split(',').forEach(function(fn) {
+		fs[fn] = Promise.promisify(fs[fn])
+	});
 } catch(e) { }
 
-// promisify a few funcs we need
-"readFile,writeFile".split(',').forEach(function(fn) {
-	fs[fn] = Promise.promisify(fs[fn])
-});
 
-var logColor = "\x1b[34m";
-var logColorReset = "\x1b[0m";
+
+var logColor = ""; //\x1b[34m";
+var logColorReset = ""; //\x1b[0m";
 
 var l = function(str) { console.log(logColor+'thumbail: '+str+logColorReset); }
 var _env;
@@ -27,7 +28,7 @@ function _filename_inject(filename, suffix) {
 function _thumbnail_filter(image_name, params) {
 	//var data = this;
 	var inf = {
-		basepath: params.path || '/images',
+		basepath: params.p || params.path || this.images_path,
 		//source: image_name,
 		//dest: '',
 		w: params.width || params.w,
@@ -49,31 +50,25 @@ function _thumbnail_filter(image_name, params) {
 }
 
 // This filter is assumed to be part of included in a <img> tag like this:
-// <img {{image #srcset{w:"800,512,256"} }}"> & it writes out, href AND srcset attribs:
-// <img href="ix256.jpg" srcset="ix512.jpg 512w, i.jpg 800w">
+// <img srcset="{{image #srcset{w:"800,512,256",o:2056} }}"> & it writes out, srcset attribs:
+// <img srcset="i-256.jpg 256w, i-512.jpg 512w, i-800.jpg 800w, i.jpg 2056w">
 function _thumbnail_srcset_filter(image_name, params) {
 	//var data = this;
 	var srcset = [];
-	var basepath = params.path || '/images';
-	var maxwidth = params.max || params.maxwidth || params.max_width || this.srcset_maxwidth || -1;
+	var basepath = params.p || params.path || this.images_path;
+	//var maxwidth = params.max || params.maxwidth || params.max_width || this.srcset_maxwidth || -1;
+	var maxwidth = params.o || params.orig || params.orig_width || params.src_width || this.srcset_origwidth || -1;
 	var src;
 	var widths = (params.width || params.widths || params.w || this.srcset_widths || "512")
 		.split(',').filter(function(str) { return str.trim(); })
 		.sort(function(a,b) { return a-b; })
 		.forEach(function(w) {
 			var dest = _thumbnail_filter.call(this, image_name, { w:w, path:basepath })
-			if (src === undefined)
-				// first (/smallest) image becomes the href
-				src = path.join(basepath,dest);
-			//else
-				// others become srcset
-				srcset.push(path.join(basepath,dest) + ' ' + w + 'w')
+			srcset.push(path.join(basepath,dest) + ' ' + w + 'w')
 		});
-	if (!src)
-		return 'src="'+image_name+'"'; // no sizes added
 	if (maxwidth>0)
 		srcset.push(path.join(basepath,image_name) + ' ' + maxwidth + 'w')
-	return 'src="'+src+'" srcset="'+srcset.join(', ')+'"';
+	return srcset.join(', ');
 }
 
 function _thumbnail_save(env) {
@@ -83,19 +78,19 @@ function _thumbnail_save(env) {
 			var source = path.join(env.getOutPath(), inf.basepath, inf.source);
 			var dest = path.join(env.getOutPath(), inf.basepath, inf.dest);
 
-			l("Reading '"+source+"'");
+			//l("Reading '"+source+"'");
 			var data = yield fs.readFile(source)
-			l("Opening '"+source+"'");
+			//l("Opening '"+source+"'");
 			var image = yield Jimp.read(data);
 			delete data;
 
-			l("Resizing '"+source+"'");
+			//l("Resizing '"+source+"'");
 			image.resize(
 					parseInt(inf.w) || Jimp.AUTO,
 					parseInt(inf.h) || Jimp.AUTO).quality(70);
 			l("Writing '"+dest+"'");
 			image.write(dest);
-			l("done");
+			//l("done");
 
 		}
 
@@ -108,23 +103,20 @@ module.exports = {
 	url: "https://github.com/ergo-cms/plugin-thumbnail",
 	active: true,
 	registeras: 'thumbnail',
-	
-	//priority: 50,
-	binary: true,
-	extensions: [], // don't register to process anything specificially
 
 	init: function(env, options) { 
 		_env = env; _env.__thumbailInf = {} 
 		if (!Jimp)
-			throw new Error("Thumbnail plugin requires some installation. Please run 'npm install --production' from inside the thumbnail folder!")
+			throw new Error("Thumbnail plugin requires some installation. Please run 'npm install --production' from inside the thumbnail folder: " + __dirname)
 	},
 	save: _thumbnail_save,
 
 	default_fields: {
 		has_thumbnails: true, // a simple signal to themes that we're available 
+		images_path: '/images',
 		thumb_defwidth: 512,
-		srcset_maxwidth: "-1",
-		srcset_widths: "256,512,720",
+		srcset_origwidth: -1,
+		srcset_widths: "256,512,1152",
 		thumb: _thumbnail_filter,
 		srcset: _thumbnail_srcset_filter
 	}
