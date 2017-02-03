@@ -1,7 +1,7 @@
 {
-  "private":true,
+  "private": true,
   "name": "ergo-thumbnail",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Thumbnail generator for ergo-cms",
   "main": "plugin.ergo.js",
   "scripts": {
