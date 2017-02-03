@@ -1,5 +1,7 @@
 # Thumbnail Generator plugin for Ergo-CMS
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/ergo-cms/plugin-thumbnail.svg)](https://greenkeeper.io/)
+
 This plugin provides the ability to rescale an image, and provide support for responsive images, using `srcset` attribute. The images are automatically generated as part of the build process.
 
 Note that this implementation makes use of a 100% Javascript image library. This is significantly slower than native libraries, but is more likely to work across different machine architectures. As such, you may wish to consider using the 'thumbnail-fast' plugin instead, which is identical in every way, (except that it may not install properly on your machine). See https://github.com/ergo-cms/plugin-thumbnail-fast.
