@@ -91,9 +91,9 @@ function _thumbnail_save(env) {
 			var statsSource = yield fs.stat(source)
 			var statsDest;
 			try {
-				var statsDest = yield fs.stat(dest)
+				statsDest = yield fs.stat(dest)
 			}
-			catch(e) { }
+			catch(e) { statsDest = undefined; }
 
 			var make_image = false;
 			if (!statsDest || statsDest.mtime.getTime() != statsSource.mtime.getTime()) {
