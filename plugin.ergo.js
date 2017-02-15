@@ -4,7 +4,7 @@ try {
 	var Promise = require('bluebird');
 	var sharp = require('sharp');
 	// promisify a few funcs we need
-	"readFile,writeFile".split(',').forEach(function(fn) {
+	"readFile,writeFile,stat,utimes".split(',').forEach(function(fn) {
 		fs[fn] = Promise.promisify(fs[fn])
 	});
 }
@@ -86,33 +86,54 @@ function _thumbnail_save(env) {
 			var inf = _env.__thumbailInf[k];
 			var source = path.join(env.getOutPath(), inf.basepath, inf.source);
 			var dest = path.join(env.getOutPath(), inf.basepath, inf.dest);
+			var relDest = path.relative(env.getOutPath(), dest);
 
-			//l("Reading '"+source+"'");
-			var data = yield fs.readFile(source)
+			var statsSource = yield fs.stat(source)
+			var statsDest;
+			try {
+				var statsDest = yield fs.stat(dest)
+			}
+			catch(e) { }
 
-			if (sharp) {
-				//l("Opening '"+source+"'");
-				var image = sharp(data);
-				delete data;
+			var make_image = false;
+			if (!statsDest || statsDest.mtime.getTime() != statsSource.mtime.getTime()) {
+				// something changed. rebuild resized image
+				make_image = true;
+			}
 
-				//l("Resizing '"+source+"'");
-				image.resize(inf.w,inf.h);
-				l("Writing '"+dest+"' using Sharp");
-				yield image.toFile(dest);
+			if (make_image) {
+				//l("Reading '"+source+"'");
+				var data = yield fs.readFile(source)
+
+				if (sharp) {
+					//l("Opening '"+source+"'");
+					var image = sharp(data);
+					delete data;
+
+					//l("Resizing '"+source+"'");
+					image.resize(inf.w,inf.h);
+					l("Writing '"+relDest+"' using Sharp");
+					yield image.toFile(dest);
+				}
+				else
+				{
+					//l("Opening '"+source+"'");
+					var image = yield Jimp.read(data);
+					delete data;
+
+					//l("Resizing '"+source+"'");
+					image.resize(
+							parseInt(inf.w) || Jimp.AUTO,
+							parseInt(inf.h) || Jimp.AUTO).quality(70);
+					l("Writing '"+relDest+"' using Jimp");
+					image.write(dest);
+				}
+
+				// write out the file with the same time. That way subsequent builds will be v. fast.
+				yield fs.utimes(dest, statsSource.atime, statsSource.mtime);
 			}
 			else
-			{
-				//l("Opening '"+source+"'");
-				var image = yield Jimp.read(data);
-				delete data;
-
-				//l("Resizing '"+source+"'");
-				image.resize(
-						parseInt(inf.w) || Jimp.AUTO,
-						parseInt(inf.h) || Jimp.AUTO).quality(70);
-				l("Writing '"+dest+"' using Jimp");
-				image.write(dest);
-			}
+				l("Skipping unchanged '"+relDest+"'")
 			//l("done");
 
 		}
@@ -124,6 +145,7 @@ function _thumbnail_save(env) {
 module.exports = {
 	name: "Ergo Thumbnail Plugin",
 	url: "https://github.com/ergo-cms/plugin-thumbnail",
+	version: "1.0.1",
 	active: true,
 	registeras: 'thumbnail',
 
