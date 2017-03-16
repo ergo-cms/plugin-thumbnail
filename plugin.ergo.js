@@ -2,11 +2,11 @@ var path = require('path');
 var fs = require('fs');
 try { 
 	var Promise = require('bluebird');
-	var sharp = require('sharp');
 	// promisify a few funcs we need
 	"readFile,writeFile,stat,utimes".split(',').forEach(function(fn) {
 		fs[fn] = Promise.promisify(fs[fn])
 	});
+	var sharp = require('sharp');
 }
 
 catch(e) {}
@@ -108,7 +108,7 @@ function _thumbnail_save(env) {
 				if (sharp) {
 					//l("Opening '"+source+"'");
 					var image = sharp(data);
-					delete data;
+					data = null;
 
 					//l("Resizing '"+source+"'");
 					image.resize(inf.w,inf.h);
@@ -119,14 +119,20 @@ function _thumbnail_save(env) {
 				{
 					//l("Opening '"+source+"'");
 					var image = yield Jimp.read(data);
-					delete data;
+					data = null;
 
 					//l("Resizing '"+source+"'");
 					image.resize(
 							parseInt(inf.w) || Jimp.AUTO,
 							parseInt(inf.h) || Jimp.AUTO).quality(70);
 					l("Writing '"+relDest+"' using Jimp");
-					image.write(dest);
+					var p = new Promise(function(resolve, reject) {
+						image.write(dest, function(err, img) {
+							if (err) reject(err);
+							else resolve(img);
+						})
+					});
+					yield p;
 				}
 
 				// write out the file with the same time. That way subsequent builds will be v. fast.
@@ -145,7 +151,7 @@ function _thumbnail_save(env) {
 module.exports = {
 	name: "Ergo Thumbnail Plugin",
 	url: "https://github.com/ergo-cms/plugin-thumbnail",
-	version: "1.0.1",
+	version: "1.1.2",
 	active: true,
 	registeras: 'thumbnail',
 
